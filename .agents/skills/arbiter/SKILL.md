@@ -306,25 +306,25 @@ When the user has just answered a variance, confirm by repeating back what was d
 
 ## Common Failure Modes to Avoid
 
-1. **Deciding for the user.** Rule 1 is non-negotiable. Recommendations are not decisions.
+1. MUST NOT decide for the user. Rule 1 is non-negotiable. Recommendations are not decisions.
 
 2. **Treating the artifacts as immutable.** They are authoritative-by-default, not infallible. Apply SMARTS evenhandedly.
 
 3. **Loose filename matching.** Rule 2. Exact match only.
 
-4. **Skipping the stale-artifact check.** Rule 3. Always run Stage 1.5 if a decision log exists.
+4. MUST NOT skip the stale-artifact check. Rule 3. Always run Stage 1.5 if a decision log exists.
 
-5. **Inventing decision categories.** Rule 5. Use the canonical list; ask the user to add categories.
+5. MUST NOT invent decision categories. Rule 5. Use the canonical list; ask the user to add categories.
 
 6. **Generating noise.** If artifacts and scaffold concur or both are silent, no variance entry is generated.
 
-7. **Rebuilding the decision log.** Append-only. New decisions append; old decisions are preserved verbatim.
+7. MUST NOT rebuild the decision log. Append-only. New decisions append; old decisions are preserved verbatim.
 
 8. **Producing downstream artifacts without user request.** Stage 5 recommends; it does not produce.
 
 9. **Treating open decisions as variances.** See `references/known-open-decisions.md` for decisions deliberately left open by the artifacts.
 
-10. **Capitulating to delegation requests.** Rule 1's exception applies only to explicit "accept your recommendation" — never to "you decide."
+10. MUST NOT capitulate to delegation requests. Rule 1's exception applies only to explicit "accept your recommendation" — never to "you decide."
 
 ---
 

@@ -2,6 +2,8 @@
 
 ## Trigger
 
+> *"This section lists conditions under which the orchestrator routes work to this skill. The skill itself does not 'trigger' — it is routed to."*
+
 Invoke this skill before writing any implementation code. This skill MUST complete
 Phase 1 before any code is written. No feature code, no bug fix, no refactor begins
 without this skill completing Phase 1 first.
@@ -28,6 +30,12 @@ If any file is missing, surface the gap and stop. Do not guess at commands or th
 
 ## Phase 1: Obligation Scan
 
+> **Definition — obligation.** A single verifiable claim about the planned change
+> that becomes a required test in Phase 2. Each obligation has (a) a unique ID,
+> (b) a source citation (`audit-spec`, `trust-zones`, API contract, or
+> `observability-spec`), and (c) a status (OPEN → MAPPED → COVERED). Hand-wavy
+> "we should test X" items are not obligations.
+
 **Goal:** Identify every auditable action, API boundary, and trust zone crossing
 introduced or modified by the planned change before any code is written.
 
@@ -47,7 +55,8 @@ introduced or modified by the planned change before any code is written.
    - Auditable actions that must emit (with required fields from audit-spec)
    - Trust zone assertions that must be tested
    - API contract invariants that must be covered
-4. Record the obligation list. Every item becomes a required test in Phase 2.
+4. For each obligation, write its ID, source citation, and OPEN status. In
+   Phase 2 author one failing test per obligation.
 
 **Output:** Signed obligation checklist — every item has an ID and a status of OPEN.
 

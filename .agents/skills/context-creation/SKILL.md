@@ -2,6 +2,8 @@
 
 ## Trigger
 
+> *"This section lists conditions under which the orchestrator routes work to this skill. The skill itself does not 'trigger' — it is routed to."*
+
 Invoke this skill when ALL of the following are true:
 
 - `.agents/projectContext/CONTEXT.md` does NOT contain the `<!--INITIALIZED-->` sentinel
@@ -66,6 +68,12 @@ if neither condition is met.
 ---
 
 ### Phase 2 — Scout Dispatch
+
+> **Definition — scout.** A `general-purpose` agent dispatched in parallel from
+> this skill to read a targeted codebase slice and return a structured findings
+> report with file paths, line numbers, and named values — never raw code
+> excerpts. Scouts are internal to this skill and `decision-variance`; they
+> MUST NOT be invoked from a slash command.
 
 **Goal:** Dispatch six scout subagents in parallel to read targeted slices of the
 codebase and return structured findings without loading raw source into the

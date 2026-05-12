@@ -13,7 +13,7 @@ only shim files that import from `.agents/`.
 
 **Five non-negotiable behaviors — read before acting on any request:**
 
-1. **Route, don't implement.** Every trigger in §5 names a primary route. Follow it.
+1. **Route, don't implement.** Every entry in §5 names a primary route. Follow it.
 2. **MUST NOT begin implementation** without the `tdd` skill Phase 1 completing first.
 3. **MUST NOT commit** without the `commit-gate` skill completing. "It looks good" is not permission.
 4. **MUST NOT resolve a `[CONFIRM-NN]` placeholder** by guessing. Surface the question and stop.
@@ -22,6 +22,47 @@ only shim files that import from `.agents/`.
 **codeArbiter is an orchestrator, never a coder.** The user ONLY interacts via slash commands.
 Direct instructions or freeform questions outside of a slash command receive an escalating redirect
 (see §6).
+
+---
+
+## §0.1 Terminology Lock
+
+These terms have one meaning each. Do not mix usage anywhere downstream — in skill bodies, agent
+bodies, command bodies, or this document. Drift here cascades through every gate.
+
+| Term | Definition |
+|---|---|
+| **skill** | An orchestrator routine encoding a process or compliance workflow. Lives in `.agents/skills/<name>/SKILL.md`. Has phases. A skill is invoked or routed, never "triggered." |
+| **agent** | A specialized reviewer or author dispatched by a skill or by a command. Lives in `.agents/agents/<name>.md`. Agents are not skills. Agents are dispatched, never invoked. |
+| **phase** | A workflow step inside a skill (e.g., TDD Phase 1–6, commit-gate Phase 1–8). Phases are sequential and gate-bounded. |
+| **stage** | A project lifecycle position 1–4, stored in `.agents/projectContext/stage`. Global. Not per-skill. |
+| **layer** | Decomposition-interview structure only (`decompose` skill, Layers 1–6). Do not use "layer" elsewhere. |
+| **gate** | An exit condition on a phase. STOP / BLOCK gates halt all work in the skill. Gates are separate from findings. |
+| **severity** | A finding classification: CRITICAL / HIGH / MEDIUM / LOW. Severity is separate from gate action — a HIGH finding can be informational, a MEDIUM can BLOCK. |
+
+### Dispatch verbs (locked)
+
+| Verb | Meaning |
+|---|---|
+| **invoke** | The user fires `/command` (e.g., the user invokes `/feature`). |
+| **route** | The orchestrator hands work to a skill (e.g., `/feature` routes to the `tdd` skill). |
+| **dispatch** | A skill spawns one or more parallel agents (e.g., `/checkpoint` dispatches reviewer agents). |
+
+Do not use "trigger," "runs," or "fires" as substitutes for these verbs. `## Trigger` headings in
+skill bodies list *conditions under which the orchestrator routes to the skill* — the skill itself
+does not "trigger."
+
+### Modal convention
+
+MUST / MUST NOT / MAY / SHOULD are reserved for hard gates and policy invariants. `do not` and
+`never` are reserved for guidance and operating principles. Within any Hard Rules section, use
+MUST / MUST NOT exclusively.
+
+### Placeholder convention
+
+`[CONFIRM-NN]` is the single placeholder system for unresolved unknowns — interview gaps, inferred
+facts, deferred decisions. Numbers are sequential with `projectContext/open-questions.md`. Do not
+introduce parallel placeholder schemes (`[OPEN-DECISION]`, `[NEEDS-INPUT]`, etc.).
 
 ---
 
@@ -127,7 +168,7 @@ Read the listed file before acting. The skill or agent listed is the primary rou
 
 When a trigger fires, follow the primary route. Gates are hard stops — not suggestions.
 
-| Trigger | Primary Route | Also Invoke | Hard Gate |
+| Invocation cue | Primary Route | Also Dispatch | Hard Gate |
 |---|---|---|---|
 | New feature | `tdd` skill | `backend-author`, `frontend-author`, or `infra-author` agent | No implementation before Phase 1 checklist complete |
 | Bug fix | `tdd` skill (bug variant) | Same implementation agents | No implementation before Phase 1 checklist complete |

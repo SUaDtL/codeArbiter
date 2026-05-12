@@ -2,6 +2,8 @@
 
 ## Trigger
 
+> *"This section lists conditions under which the orchestrator routes work to this skill. The skill itself does not 'trigger' — it is routed to."*
+
 Invoke this skill to audit the health of the project's decision record — ADRs,
 open questions, and CONFIRM-NN placeholders. Also invoke whenever a new ADR is
 added, an ADR ages past review threshold, or a CONFIRM-NN is encountered.

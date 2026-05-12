@@ -2,6 +2,8 @@
 
 ## Trigger
 
+> *"This section lists conditions under which the orchestrator routes work to this skill. The skill itself does not 'trigger' — it is routed to."*
+
 Loaded by the `ticketing` router when `mode: plane`. This file is never read
 directly — invoke via the router.
 

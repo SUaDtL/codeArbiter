@@ -2,6 +2,8 @@
 
 ## Trigger
 
+> *"This section lists conditions under which the orchestrator routes work to this skill. The skill itself does not 'trigger' — it is routed to."*
+
 Invoke this skill before acting in any domain listed in AGENTS.md §4 Reference
 Map, and whenever a file under `.agents/projectContext/` is modified or
 referenced.

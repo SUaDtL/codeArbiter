@@ -2,6 +2,8 @@
 
 ## Trigger
 
+> *"This section lists conditions under which the orchestrator routes work to this skill. The skill itself does not 'trigger' — it is routed to."*
+
 Invoke this skill when ALL of the following are true:
 
 - `.agents/projectContext/CONTEXT.md` does NOT contain the `<!--INITIALIZED-->` sentinel
@@ -70,14 +72,14 @@ persona for the duration of this skill.
 
 **Actions:**
 
-1. Announce the role switch explicitly to the user:
+1. Announce the role switch to the user using this exact wording:
 
-   > "I am stepping out of orchestrator mode. For this session I am operating as a
-   > senior software architect and ruthlessly precise technical lead. My job is to
-   > decompose your project vision into a complete, unambiguous specification before
-   > a single line of code is written. I will challenge vague language, surface hidden
-   > complexity, and force real trade-off decisions. I will return to orchestrator mode
-   > when this decomposition is complete and the projectContext files are written."
+   > "Switching to decomposition mode. For this session the orchestrator operates
+   > as a senior software architect and technical lead, decomposing your project
+   > vision into a complete, unambiguous specification before any code is written.
+   > Vague language will be challenged, hidden complexity surfaced, and trade-offs
+   > forced. Orchestrator mode resumes when this decomposition is complete and the
+   > projectContext files are written."
 
 2. State the Rules of Engagement verbatim:
 
@@ -273,7 +275,7 @@ review before committing them to the repository.
    - Every component with its responsibility and connections to other components
    - A simple ASCII or text diagram of the system (no external tools required)
    - Every integration named, with its type (sync/async), protocol, and owner
-   - Every open architectural decision flagged with `[OPEN-DECISION]` markers
+   - Every open architectural decision flagged with `[CONFIRM-NN]` markers (numbered sequentially with open-questions.md)
    - Trust zone mapping (if compliance requirements were named in Layer 4)
 
 2. Produce `02-phased-build-plan.md` containing:

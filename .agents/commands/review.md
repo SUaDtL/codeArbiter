@@ -56,7 +56,7 @@ Path-conditional (invoked when the scope matches):
 
 ## When NOT to Use
 
-- To open a PR (which runs reviews automatically): use `/pr`
+- To open a PR (which dispatches reviewers automatically): use `/pr`
 - For a full checkpoint across the entire codebase: use `/checkpoint`
 - For a threat model before a new feature: use `/threat-model`
 - For questions about the code: use `/btw`
