@@ -1,1 +1,6 @@
 legacy/
+
+# Local environment files. Ticketing skill (Plane mode) credentials live in
+# shell env vars; if sourced from a file, that file MUST be gitignored.
+.env
+.env.local
