@@ -6,7 +6,7 @@ CONTENT=$(echo "$INPUT" | jq -r '.tool_input.content // ""')
 
 # H-04: stage file is write-protected
 if echo "$FPATH" | grep -qE '\.agents/projectContext/stage$'; then
-  echo "BLOCKED [H-04]: .agents/projectContext/stage is write-protected. Use /stage command only (stage-gating/SKILL.md)." >&2
+  echo "BLOCKED [H-04]: .agents/projectContext/stage is write-protected. Use /stage command only (${FRAMEWORK_ROOT}/.agents/skills/stage-gating/SKILL.md)." >&2
   exit 1
 fi
 

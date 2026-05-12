@@ -22,7 +22,7 @@ fi
 
 # H-10: possible hardcoded secret
 if echo "$CONTENT" | grep -qiE '\b(password|secret|token|api_key|apikey|private_key|passphrase|credential)\s*=\s*["'"'"'][^"'"'"']{4,}'; then
-  echo "REMINDER [H-10]: Possible hardcoded secret detected. Invoke secret-handling skill (secret-handling/SKILL.md Phase 1-2)." >&2
+  echo "REMINDER [H-10]: Possible hardcoded secret detected. Invoke secret-handling skill (${FRAMEWORK_ROOT}/.agents/skills/secret-handling/SKILL.md Phase 1-2)." >&2
 fi
 
 exit 0
