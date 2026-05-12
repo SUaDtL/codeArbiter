@@ -198,7 +198,7 @@ Row shape: `Command | Argument | One-line purpose | Body`. Open a body only when
 6. `decision-challenger`
 7. `finding-triage` → `checkpoint-aggregator`
 
-**Hard gate:** All 7 reviewers must complete. No skipping. `checkpoint-aggregator` writes a dated checkpoint document to `projectContext/checkpoints/`.
+**Hard gate:** All 7 reviewers must complete. No skipping. `checkpoint-aggregator` writes a dated checkpoint document to `${PROJECT_ROOT}/.agents/projectContext/checkpoints/`.
 
 **When to use:** Before any stage promotion; periodically during development; when `finding-triage` identifies a `BLOCKS_S2` finding.
 
@@ -214,7 +214,7 @@ Row shape: `Command | Argument | One-line purpose | Body`. Open a body only when
 
 **With argument (e.g., `/stage 2`):** Runs the full stage promotion checklist. Requires named approver and all gates passing.
 
-**Hard gate:** No `projectContext/stage` value change without named approver and gate confirmation.
+**Hard gate:** No `${PROJECT_ROOT}/.agents/projectContext/stage` value change without named approver and gate confirmation.
 
 ---
 
@@ -265,7 +265,7 @@ Row shape: `Command | Argument | One-line purpose | Body`. Open a body only when
 
 **Args:** `"artifact-id"` — the artifact's store reference from `secrets-policy.md`. Never the credential value or a fingerprint of it.
 
-**Default cadences** are defined in `projectContext/secrets-policy.md` per artifact category (signing keys, OIDC client secrets, TLS certs, API tokens, service accounts).
+**Default cadences** are defined in `${PROJECT_ROOT}/.agents/projectContext/secrets-policy.md` per artifact category (signing keys, OIDC client secrets, TLS certs, API tokens, service accounts).
 
 **Example invocations:**
 - `/rotate "jwt-signer-2025"`
@@ -290,7 +290,7 @@ Row shape: `Command | Argument | One-line purpose | Body`. Open a body only when
 
 ### `/ticket "title" | <subcommand>`
 
-**Purpose:** Optional scope-overflow inbox for subagent findings (in-repo mode) OR project management bridge to Plane (Plane mode). Disabled by default; opt in by editing `projectContext/ticketing-config.md`.
+**Purpose:** Optional scope-overflow inbox for subagent findings (in-repo mode) OR project management bridge to Plane (Plane mode). Disabled by default; opt in by editing `${PROJECT_ROOT}/.agents/projectContext/ticketing-config.md`.
 
 **What it routes to:** `ticketing-router` skill (`${FRAMEWORK_ROOT}/.agents/skills/ticketing-router/SKILL.md`) — reads `mode` from config and `@`-imports only the active variant (`in-repo/` or `plane/`).
 
@@ -328,7 +328,7 @@ Row shape: `Command | Argument | One-line purpose | Body`. Open a body only when
 
 **Purpose:** Show everything currently open — in-flight tasks and unresolved decisions.
 
-**What it routes to:** Reads `projectContext/open-tasks.md` and `projectContext/open-questions.md`. Read-only. No side effects.
+**What it routes to:** Reads `${PROJECT_ROOT}/.agents/projectContext/open-tasks.md` and `${PROJECT_ROOT}/.agents/projectContext/open-questions.md`. Read-only. No side effects.
 
 **Output:**
 - Current stage
@@ -352,7 +352,7 @@ Row shape: `Command | Argument | One-line purpose | Body`. Open a body only when
 
 **Purpose:** Bypass a gate or process requirement with a mandatory, append-only audit log entry.
 
-**What it routes to:** Identity detection (git config → env vars → CLI → manual prompt), log append to `projectContext/overrides.log`, then proceeds with the overridden action.
+**What it routes to:** Identity detection (git config → env vars → CLI → manual prompt), log append to `${PROJECT_ROOT}/.agents/projectContext/overrides.log`, then proceeds with the overridden action.
 
 **Auto-detected identity:** `git config user.name` + `git config user.email` (tried first). Falls through to env vars, then CLI, then prompt only if all else fails.
 
@@ -366,7 +366,7 @@ Row shape: `Command | Argument | One-line purpose | Body`. Open a body only when
 
 **Purpose:** Emergency-bypass channel for P0/P1 incidents where waiting on the full gate suite would extend production harm. Unlike `/override` (a per-action escape hatch), `/hotfix` is a **two-person, time-boxed, post-hoc-audited** bypass.
 
-**What it dispatches (inline workflow — no backing skill):** identity detection → second-identity attestation check → log entry written to `.agents/projectContext/hotfixes.log` (BEFORE bypass applied) → bypass applied → auto-revert deadline recorded → operator surfaced with deadline and post-hoc-ADR obligation.
+**What it dispatches (inline workflow — no backing skill):** identity detection → second-identity attestation check → log entry written to `${PROJECT_ROOT}/.agents/projectContext/hotfixes.log` (BEFORE bypass applied) → bypass applied → auto-revert deadline recorded → operator surfaced with deadline and post-hoc-ADR obligation.
 
 **Hard gates:**
 - **Two-identity** — `--escalation-tier` MUST differ from the auto-detected operator identity. BLOCK on match; there is no flag to disable.

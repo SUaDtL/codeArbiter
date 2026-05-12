@@ -1,5 +1,5 @@
 # TASK-05: COMMANDS.md rewrite
-<!-- TASK-05: OPEN -->
+<!-- TASK-05: CLOSED -->
 ## Owner: SUBAGENT-D
 ## Files
 - /home/user/arbiterRebuild/COMMANDS.md
