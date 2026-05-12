@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 which jq > /dev/null 2>&1 || exit 0
+PROJECT_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
 INPUT=$(cat)
 FPATH=$(echo "$INPUT" | jq -r '.tool_input.file_path // ""')
 CONTENT=$(echo "$INPUT" | jq -r '.tool_input.content // .tool_input.new_string // ""')
@@ -17,7 +18,7 @@ fi
 # H-09: crypto pattern detected
 # Default conservative list; refine once .agents/projectContext/security-controls.md is populated
 if echo "$CONTENT" | grep -qiE '(createHash|createCipher|createHmac|\bmd5\b|\bsha1\b|\brc4\b|\bdes\b|3des|\bRSA\b|\bTLS\b|\.ssl\b|x509|bcrypt|crypto\.)'; then
-  echo "REMINDER [H-09]: Cryptographic pattern detected. Invoke crypto-compliance skill and auth-crypto-reviewer agent (AGENTS.md §5). Verify against .agents/projectContext/security-controls.md." >&2
+  echo "REMINDER [H-09]: Cryptographic pattern detected. Invoke crypto-compliance skill and auth-crypto-reviewer agent (AGENTS.md §5). Verify against ${PROJECT_ROOT}/.agents/projectContext/security-controls.md." >&2
 fi
 
 # H-10: possible hardcoded secret

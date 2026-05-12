@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 which jq > /dev/null 2>&1 || exit 0
+PROJECT_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
 INPUT=$(cat)
 FPATH=$(echo "$INPUT" | jq -r '.tool_input.file_path // ""')
 NEW=$(echo "$INPUT" | jq -r '.tool_input.new_string // ""')
@@ -13,7 +14,7 @@ fi
 
 # H-11: ADRs may only be authored via /adr (decision-lifecycle skill writes the marker)
 if echo "$FPATH" | grep -qE '\.agents/projectContext/decisions/[0-9]+-.+\.md$'; then
-  MARKER=".agents/.markers/adr-authoring-active"
+  MARKER="$PROJECT_ROOT/.agents/.markers/adr-authoring-active"
   if [ ! -f "$MARKER" ]; then
     echo "BLOCKED [H-11]: ADR files may only be edited via /adr (AGENTS.md §3). Run /adr to author or revise an ADR with user attribution." >&2
     exit 1
