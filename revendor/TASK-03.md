@@ -1,5 +1,5 @@
 # TASK-03: Agents sweep — all agent body files
-<!-- TASK-03: OPEN -->
+<!-- TASK-03: CLOSED -->
 ## Owner: SUBAGENT-B
 ## Files
 All files under /home/user/arbiterRebuild/.agents/agents/:

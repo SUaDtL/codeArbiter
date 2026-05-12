@@ -1,5 +1,5 @@
 # TASK-04: Commands sweep — all command body files
-<!-- TASK-04: OPEN -->
+<!-- TASK-04: CLOSED -->
 ## Owner: SUBAGENT-C
 ## Files
 All files under /home/user/arbiterRebuild/.agents/commands/:

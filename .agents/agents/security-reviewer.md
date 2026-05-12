@@ -34,7 +34,7 @@ For every finding, produce:
 **Severity:** CRITICAL | HIGH | MEDIUM | LOW
 **File:** <path>:<line>
 **Description:** <what the problem is — specific, no vague claims>
-**Control:** <applicable control ID or section from projectContext/security-controls.md>
+**Control:** <applicable control ID or section from ${PROJECT_ROOT}/.agents/projectContext/security-controls.md>
 **Remediation:** <concrete action to fix it>
 ```
 

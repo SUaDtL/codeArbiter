@@ -7,7 +7,7 @@ Report the current project stage, or run the promotion checklist to advance to a
 ## Usage
 
 ```
-/stage          # report current stage from projectContext/stage
+/stage          # report current stage from ${PROJECT_ROOT}/.agents/projectContext/stage
 /stage 2        # run promotion checklist: current → Stage 2
 /stage 3        # run promotion checklist: current → Stage 3
 ```

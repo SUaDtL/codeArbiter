@@ -47,7 +47,7 @@ completed.
 ## Hard Gates (BLOCK conditions)
 
 - **No last-rotation timestamp** — artifact has no recorded rotation history
-  in `projectContext/secrets-policy.md`. Cadence cannot be audited; rotation
+  in `${PROJECT_ROOT}/.agents/projectContext/secrets-policy.md`. Cadence cannot be audited; rotation
   cannot proceed until inventory is repaired or the artifact is marked for
   first-rotation flow.
 - **Past cadence** — artifact age exceeds the applicable cadence from
@@ -59,7 +59,7 @@ completed.
   gap — no archival path is invented at the command layer.
 - **Missing audit-emit** — the `audit-emit` skill has not completed Phase 5
   (Test Obligation) for the rotation event, or the emit routes through any
-  path other than the canonical sink in `projectContext/audit-spec.md`.
+  path other than the canonical sink in `${PROJECT_ROOT}/.agents/projectContext/audit-spec.md`.
 - **Missing archival record** — Phase 5 has not written the four-fact record,
   or the last-rotation timestamp has not been updated in the authoritative
   register. The rotation is NOT marked complete until both are present.

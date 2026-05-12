@@ -21,7 +21,7 @@ Title should name the decision clearly: what was decided, not what was considere
 **Authoring marker (H-11).** Before invoking the skill, run:
 
 ```
-mkdir -p .agents/.markers && touch .agents/.markers/adr-authoring-active
+mkdir -p ${FRAMEWORK_ROOT}/.agents/.markers && touch ${FRAMEWORK_ROOT}/.agents/.markers/adr-authoring-active
 ```
 
 The H-11 PreToolUse hook (`${FRAMEWORK_ROOT}/.agents/hooks/pre-write.sh`, `${FRAMEWORK_ROOT}/.agents/hooks/pre-edit.sh`) blocks Writes and Edits to `${PROJECT_ROOT}/.agents/projectContext/decisions/*.md` unless this marker is present and fresh (modified within the last 30 minutes).
@@ -29,7 +29,7 @@ The H-11 PreToolUse hook (`${FRAMEWORK_ROOT}/.agents/hooks/pre-write.sh`, `${FRA
 After the skill completes Step 7 (or if `/adr` aborts), remove the marker:
 
 ```
-rm -f .agents/.markers/adr-authoring-active
+rm -f ${FRAMEWORK_ROOT}/.agents/.markers/adr-authoring-active
 ```
 
 If the command aborts midway, the marker may persist until cleaned up or ages out.
