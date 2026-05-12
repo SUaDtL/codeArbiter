@@ -59,6 +59,8 @@ attention.
 
 5. Record the complete ADR table with health tags.
 
+Any ADR tagged AGED (>12 weeks) OR triggered by a stage promotion event MUST proceed to Phase 4 (challenge routing) — the challenge is no longer optional in those two cases.
+
 **Output:** ADR health table with ID, title, status, age, and health tags.
 
 **Gate:** BLOCK. Phase 2 does not begin until the ADR table is complete. A
@@ -149,9 +151,7 @@ record confidence ratings.
 
 **Actions:**
 
-1. For each ADR tagged AGED or UNCHALLENGED, spawn the `decision-challenger`
-   agent to evaluate whether the decision still holds given current project
-   state, stage, and any newer decisions.
+1. For each ADR tagged AGED, UNCHALLENGED, or flagged by a stage-promotion event, dispatch the decision-challenger agent. AGED and stage-promotion challenges MUST execute; UNCHALLENGED follows existing logic.
 2. The `decision-challenger` agent MUST return a confidence rating for each
    reviewed ADR:
 
@@ -228,6 +228,7 @@ rating of ≤ 2 must be surfaced as a stage promotion blocker.
 | Phase 2 exit | CONFIRM-NN resolved by guessing                              | Stop; surface OPEN item to user            |
 | Phase 3 exit | ADR conflict found with no directional resolution            | Surface conflict; stop until user provides direction |
 | Phase 4 exit | ADR rated 0 by challenger agent                              | Escalate to user; block stage promotion    |
+| Phase 4 entry | AGED ADR or stage-promotion event without dispatched challenge | BLOCK; dispatch challenger before continuing |
 | Phase 5 exit | Report section missing or confidence ≤ 2 not flagged        | Complete report; flag blockers             |
 
 ---
@@ -245,6 +246,8 @@ rating of ≤ 2 must be surfaced as a stage promotion blocker.
   specific evidence.
 - MUST NOT skip spawning the `decision-challenger` agent for AGED or
   UNCHALLENGED ADRs — the skill's challenge routing is not optional.
+- MUST dispatch decision-challenger on every AGED ADR. The challenge is not optional after 12 weeks.
+- MUST dispatch decision-challenger on all ADRs as part of any stage promotion (via /release or /stage).
 
 ---
 

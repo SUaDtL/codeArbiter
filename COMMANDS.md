@@ -16,6 +16,8 @@ Row shape: `Command | Argument | One-line purpose | Body`. Open a body only when
 |---|---|---|---|
 | `/feature` | `"description"` | Start a new feature; routes to TDD skill (6 phases) | [body](.agents/commands/feature.md) |
 | `/fix` | `"bug description"` | Fix a bug using the same TDD workflow, bug-framed | [body](.agents/commands/fix.md) |
+| `/refactor` | `"surface and motivation"` | Behavior-preserving change; routes to refactor skill (6 phases) | [body](.agents/commands/refactor.md) |
+| `/debug` | `"symptom description"` | Investigate-then-decide RCA; outcomes: /fix, /ticket, or close | [body](.agents/commands/debug.md) |
 | `/commit` | _(none)_ | Commit staged changes; routes to commit-gate skill | [body](.agents/commands/commit.md) |
 | `/pr` | `["title"]` | Open a pull request after all gates pass | [body](.agents/commands/pr.md) |
 | `/review` | `[path or scope]` | Security + code review of a path or scope | [body](.agents/commands/review.md) |
@@ -24,13 +26,16 @@ Row shape: `Command | Argument | One-line purpose | Body`. Open a body only when
 | `/adr-status` | `[--adr N]` | Check ADR health — aged, unchallenged, unresolved CONFIRM-NN | [body](.agents/commands/adr-status.md) |
 | `/checkpoint` | `[focus]` | Full checkpoint review — all 7 reviewers in parallel | [body](.agents/commands/checkpoint.md) |
 | `/stage` | `[target]` | Report current stage or promote to target stage | [body](.agents/commands/stage.md) |
+| `/release` | `["version" \| --auto \| --dry-run]` | SemVer bump, changelog, tag; deployment readiness gate | [body](.agents/commands/release.md) |
 | `/add-dep` | `"package"` | Add a dependency with full vetting before install | [body](.agents/commands/add-dep.md) |
+| `/rotate` | `"artifact-id"` | Rotate a secret/key with cadence + audit + archival gates | [body](.agents/commands/rotate.md) |
 | `/surface-conflict` | `"description"` | Stop all work and surface a rule conflict | [body](.agents/commands/surface-conflict.md) |
 | `/ticket` | `"title" \| <sub>` | Optional scope-overflow inbox; in-repo or Plane variant | [body](.agents/commands/ticket.md) |
 | `/btw` | `"question"` | Ask a quick question; no state change, lightweight | [body](.agents/commands/btw.md) |
 | `/status` | _(none)_ | Show open tasks and unresolved decisions | [body](.agents/commands/status.md) |
 | `/init` | _(none)_ | Re-run initialization detection (repair only) | [body](.agents/commands/init.md) |
 | `/override` | `"reason"` | Bypass a gate with auto-identity audit log entry | [body](.agents/commands/override.md) |
+| `/hotfix` | `"reason" --severity --escalation-tier --auto-revert-window` | Emergency bypass with two-identity audit + post-hoc ADR | [body](.agents/commands/hotfix.md) |
 | `/onboard` | `["scope"]` | Engineer onboarding tour, full or targeted | [body](.agents/commands/onboard.md) |
 | `/new-skill` | `"gap description"` | Author a new skill after rigorous gap validation | [body](.agents/commands/new-skill.md) |
 | `/commands` | _(none)_ | Show this quick-reference table | [body](.agents/commands/commands.md) |
@@ -62,6 +67,53 @@ Row shape: `Command | Argument | One-line purpose | Body`. Open a body only when
 **Hard gate:** Regression test must fail before fix is written (proof the test covers the actual bug).
 
 **When to use:** Any defect, regression, or incorrect behavior confirmed to exist.
+
+---
+
+### `/refactor "surface and motivation"`
+
+**Purpose:** Restructure existing code without changing observable behavior. The only permitted path to begin a refactor.
+
+**What it routes to:** `refactor` skill (`.agents/skills/refactor/SKILL.md`) — Phases 1–6: surface identification, behavioral-parity coverage proof, red parity tests (conditional), implementation, parity verification, lint/coverage gate.
+
+**Hard gate:** No refactor proceeds without behavioral-parity coverage proof in Phase 2. If the named surface is below the stage coverage threshold or any public method has zero direct tests, the skill halts and routes to `tdd` Phase 1 to backfill. A Phase 4 diff that classifies as `feat` or a Phase 5 verification that depends on edits to a pre-existing test re-routes to `/feature` or `/fix`.
+
+**Args:** `"surface and motivation"` — two required parts. The surface MUST name exact files/symbols (a reader can grep and arrive at the same set). The motivation MUST state why the restructure is worth doing.
+
+**When NOT to use:** New behavior, branches, or error paths → `/feature`. A change motivated by "the current behavior is wrong" → `/fix`. Questions → `/btw`.
+
+**Example invocations:**
+- `/refactor "extract signToken, verifyToken, rotateKey from src/auth/index.ts into src/auth/tokens.ts so the next rotation feature has a clean seam"`
+- `/refactor "collapse duplicated retry-with-backoff in src/http/client.ts and src/ws/client.ts into a shared src/net/retry.ts"`
+- `/refactor "split src/payments/processor.ts into processor.ts, validation.ts, settlement.ts without changing the exported Processor signature"`
+
+**See also:** `/feature`, `/fix`, `/commit`.
+
+---
+
+### `/debug "symptom description"`
+
+**Purpose:** Investigate-then-decide root-cause analysis for situations where the cause of a defect is **not yet known**. Distinct from `/fix`, which assumes a known bug with a named regression test obligation.
+
+**What it routes to:** `debug` skill (`.agents/skills/debug/SKILL.md`) — Phases 1–5: symptom capture, hypothesis generation, evidence gathering, exit decision, handoff.
+
+**Hard gate:** The skill MUST NOT modify code. Code edits belong to `/fix` and `/fix` is only reached after `debug` has named a confirmed bug and a regression test obligation. Phase 1 BLOCKS on missing minimal repro.
+
+**Phase 4 exits (one of three):**
+- **Confirmed bug** — handoff to `/fix` with named regression test obligation
+- **Design/behavior ambiguity** — escalation to `/ticket` or `/adr`
+- **No-action close** — recorded findings, no further work
+
+**Args:** `"symptom description"` — at minimum one sentence stating what the system did. Causes are recorded in Phase 2, not in the invocation.
+
+**When NOT to use:** Known bug with named regression test → `/fix` directly. Design discussion with no failing behavior → `/adr` or `/ticket`. New feature → `/feature`.
+
+**Example invocations:**
+- `/debug "auth endpoints returning 500 intermittently since yesterday's deploy — repro unclear"`
+- `/debug "payment settlement totals drift by cents under load; off-by-one suspected but unverified"`
+- `/debug "users report they cannot log in after password reset, but staging passes end-to-end"`
+
+**See also:** `/fix`, `/ticket`, `/adr`.
 
 ---
 
@@ -166,6 +218,28 @@ Row shape: `Command | Argument | One-line purpose | Body`. Open a body only when
 
 ---
 
+### `/release ["version" | --auto | --dry-run]`
+
+**Purpose:** Compose a tagged, announceable release. The only permitted path to a version tag. A release is a deployment-readiness assertion: the codebase at this SHA satisfies every published threshold for shipping.
+
+**What it routes to:** `release` skill (`.agents/skills/release/SKILL.md`) — Phases 1–7: pre-flight readiness, checkpoint gate, SemVer version bump, changelog generation, ADR currency check, stage threshold verification, tag and announce. The skill is a gate aggregator and routes to `/checkpoint`, `decision-lifecycle`, and `stage-gating`.
+
+**Hard gate:** No tag is composed without all 7 phases recording PASS. DEFERRED is not PASS. MUST NOT silently downgrade or upgrade SemVer classification. MUST NOT push the tag to a remote without explicit user authorization. Any BLOCK is bypassable only via `/override`.
+
+**Args:**
+- `--auto` (default) — version is derived mechanically from `LAST_TAG..HEAD` via Conventional Commits
+- `"X.Y.Z"` — explicit version; Phase 3 still classifies the commit log and BLOCKS on disagreement
+- `--dry-run` — runs all gates, surfaces the readiness report, STOPS before tag composition
+
+**Example invocations:**
+- `/release` — default flow, auto-derive version, compose tag if all gates green
+- `/release "2.0.0"` — explicit version; Phase 3 BLOCKS if commit log classifies differently
+- `/release --dry-run` — full gate evaluation, no tag composed, useful as a pre-flight
+
+**See also:** `/checkpoint`, `/stage`, `/adr-status`.
+
+---
+
 ### `/add-dep "package"`
 
 **Purpose:** Add a new dependency after full vetting.
@@ -175,6 +249,30 @@ Row shape: `Command | Argument | One-line purpose | Body`. Open a body only when
 **Hard gate:** BLOCK on any denied license. BLOCK on supply-chain concerns. Package is not installed until the reviewer clears it.
 
 **When to use:** Before running any package install command. Do not install first and review later.
+
+---
+
+### `/rotate "artifact-id"`
+
+**Purpose:** Rotate a single rotation-bearing artifact — signing key, OIDC client secret, TLS certificate, API token, or service-account credential — through the full inventory → cadence → plan → audit-emit → archival lifecycle. A rotation without an archival record is treated as credential loss.
+
+**What it routes to:** `rotation` skill (`.agents/skills/rotation/SKILL.md`) — Phases 1–5: inventory, cadence check, rotation plan, audit emit, archival. Phase 3 routes the proposed replacement primitive through `crypto-compliance` before issuance. Phase 4 routes the rotation event through `audit-emit` in full.
+
+**Hard gates:**
+- **Cadence** — past-cadence artifacts MUST enter the rotation plan or be recorded as a `CONFIRM-NN` exception. Silent reconciliation is prohibited.
+- **Audit-emit** — `audit-emit` Phase 5 (Test Obligation) MUST complete before Phase 4 exits. Emit MUST route through the canonical sink in `audit-spec.md`.
+- **Archival** — the four-fact record (which / when / what / who) MUST be written and the last-rotation timestamp updated before the rotation is marked complete.
+
+**Args:** `"artifact-id"` — the artifact's store reference from `secrets-policy.md`. Never the credential value or a fingerprint of it.
+
+**Default cadences** are defined in `projectContext/secrets-policy.md` per artifact category (signing keys, OIDC client secrets, TLS certs, API tokens, service accounts).
+
+**Example invocations:**
+- `/rotate "jwt-signer-2025"`
+- `/rotate "oidc-client-partner-portal"`
+- `/rotate "CN=api.example.internal"`
+
+**See also:** `/add-dep`, `/checkpoint` (may auto-route to `/rotate` for aged artifacts).
 
 ---
 
@@ -261,6 +359,35 @@ Row shape: `Command | Argument | One-line purpose | Body`. Open a body only when
 **When to use:** When a process gate must be bypassed for a legitimate reason (time pressure, broken environment, explicit approval from a named approver). Every override is permanent, auditable, and visible to all reviewers.
 
 **What NOT to use for:** Routine workarounds. If you find yourself using `/override` repeatedly for the same gate, that gate may need to be updated — use `/new-skill` or `/adr` to address the root cause.
+
+---
+
+### `/hotfix "reason" --severity --escalation-tier --auto-revert-window`
+
+**Purpose:** Emergency-bypass channel for P0/P1 incidents where waiting on the full gate suite would extend production harm. Unlike `/override` (a per-action escape hatch), `/hotfix` is a **two-person, time-boxed, post-hoc-audited** bypass.
+
+**What it dispatches (inline workflow — no backing skill):** identity detection → second-identity attestation check → log entry written to `.agents/projectContext/hotfixes.log` (BEFORE bypass applied) → bypass applied → auto-revert deadline recorded → operator surfaced with deadline and post-hoc-ADR obligation.
+
+**Hard gates:**
+- **Two-identity** — `--escalation-tier` MUST differ from the auto-detected operator identity. BLOCK on match; there is no flag to disable.
+- **Pre-bypass logging** — `hotfixes.log` append MUST precede the bypass action; no silent bypasses.
+- **Post-hoc ADR within 72h** — independent of `--auto-revert-window`. `/checkpoint` BLOCKS stage promotion on any entry past `EXPIRES:` with `ADR: pending` or any entry past 72h without an authored ADR.
+- **Severity gate** — anything lower than P1 MUST use `/override`, not `/hotfix`.
+
+**Args:**
+- `"reason"` — what gate is bypassed and why the incident justifies skipping; vague reasons rejected
+- `--severity P0|P1` — required; P0 = customer-facing outage / data integrity event, P1 = severe degradation
+- `--escalation-tier <identity>` — the attesting second human (email or username); MUST differ from operator
+- `--auto-revert-window 24h|72h|7d` — wall-clock deadline after which `/checkpoint` flags expired-without-followup
+
+**Differences from `/override`:** two identities required (not one); severity flag mandatory; time-boxed; post-hoc ADR mandatory within 72h; separate log file (`hotfixes.log` vs `overrides.log`); BLOCKS stage promotion if expired or ADR-missing.
+
+**Example invocations:**
+- `/hotfix "auth service returning 500 for all tenants — rollback blocked by failing migration-reviewer" --severity P0 --escalation-tier "j.smith@example.com" --auto-revert-window 72h`
+- `/hotfix "payment webhook signature verification failing after dependency CVE patch — partner traffic dropping" --severity P1 --escalation-tier "ops-lead@example.com" --auto-revert-window 24h`
+- `/hotfix "DB connection pool exhausted under unexpected load; need to ship raised limit without standard review window" --severity P1 --escalation-tier "dba@example.com" --auto-revert-window 7d`
+
+**See also:** `/override`, `/adr` (authors the mandatory post-hoc decision record and updates the `hotfixes.log` entry's `ADR:` field), `/checkpoint` (enforces expiration and post-hoc-ADR gates).
 
 ---
 

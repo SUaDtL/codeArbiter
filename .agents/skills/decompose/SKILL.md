@@ -333,6 +333,7 @@ no template boilerplate left unfilled:
 | Layer 4 stack + hard constraints | `.agents/projectContext/tech-stack.md` |
 | Layer 4 compliance + crypto requirements | `.agents/projectContext/security-controls.md` |
 | Layer 4 state-change actions + write paths | `.agents/projectContext/audit-spec.md` |
+| Layers 1–6 observability-relevant decisions (signals, naming, labels, cardinality budgets, emit modules, alert rule storage, SLOs) | `.agents/projectContext/observability-spec.md` — instantiate `.agents/skills/observability-emit/templates/observability-spec.md.tmpl`; populate signal categories, naming conventions, required labels, cardinality budgets, canonical emit module paths, alert rule storage location, SLO definitions per the decomposed project's needs. |
 | Layer 4 lint, format, naming decisions | `.agents/projectContext/coding-standards.md` |
 | Layer 5 secret-bearing integrations | `.agents/projectContext/secrets-policy.md` |
 | Layer 5 dependency strategy + license stance | `.agents/projectContext/dependency-policy.md` |
@@ -391,6 +392,7 @@ and return codeArbiter to normal orchestrator operation.
    - `tech-stack.md`
    - `security-controls.md`
    - `audit-spec.md`
+   - `observability-spec.md`
    - `coding-standards.md`
    - `secrets-policy.md`
    - `dependency-policy.md`
