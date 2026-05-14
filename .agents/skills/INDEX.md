@@ -47,7 +47,7 @@ A skill MAY be in multiple classes (e.g. `user → /adr` AND `condition` for "AD
 | `security-architecture` | Pre-implementation threat model; new trust-zone crossings; attack-surface change review | `user → /threat-model` AND `condition` (new trust zone crossing / threat model / attack surface change) | [body](security-architecture/SKILL.md) |
 | `skill-author` | Author a new skill after gap validation; enforces phase / gate / failure-modes structure | `user → /new-skill` | [body](skill-author/SKILL.md) |
 | `stage-gating` | Stage 1–4 promotion with named-approver requirement; reads `${PROJECT_ROOT}/.agents/projectContext/stage` | `user → /stage` AND `condition` (code has stage-conditional behavior) | [body](stage-gating/SKILL.md) |
-| `tdd` | 6-phase TDD workflow: obligation checklist → failing test → minimal implementation → green → refactor → integration. Dispatches `backend-author`, `frontend-author`, or `infra-author` agent | `user → /feature`, `user → /fix` | [body](tdd/SKILL.md) |
+| `tdd` | 6-phase TDD workflow: obligation checklist → failing test → minimal implementation → green → refactor → integration. Dispatches `backend-author`, `frontend-author`, or `infra-author` agent | `user → /feature, /fix` | [body](tdd/SKILL.md) |
 | `ticketing-router` | Routes out-of-scope subagent findings to in-repo tickets or Plane (variant per `${PROJECT_ROOT}/.agents/projectContext/ticketing-config.md`); BLOCKs on `adr-*` dispositions and `incorporated-to:*` without target-doc edit | `user → /ticket` AND `condition` (subagent raises out-of-scope finding) | [body](ticketing-router/SKILL.md) |
 
 ## Cross-references

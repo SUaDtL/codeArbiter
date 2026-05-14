@@ -31,44 +31,51 @@ Triggers:
 
 ## Pre-Flight
 
-Before Phase 1 begins, confirm in order:
+Before Phase 1 begins, run these ordered checks. Each either passes silently or
+hard-stops with a specific routing action:
 
-1. Read `${PROJECT_ROOT}/.agents/projectContext/CONTEXT.md`. If the file contains `<!--INITIALIZED-->`,
-   stop immediately — context already exists. Inform the user and route to normal
-   operation (Phase 3 of the startup protocol).
+1. Read `${PROJECT_ROOT}/.agents/projectContext/CONTEXT.md`. If the file contains
+   `<!--INITIALIZED-->` on its own line (matching the H-08 hook regex
+   `^[[:space:]]*<!--INITIALIZED-->[[:space:]]*$`), stop immediately — context
+   already exists. Route to normal operation (Phase 3 of the startup protocol).
 2. Check for meaningful source code: scan the repository root for files or directories
    that are not `.git/`, `.agents/`, `.claude/`, the vendored framework tree if any
    (e.g. `vendor/codearbiter/`), `AGENTS.md`, `CLAUDE.md`, `README.md`, `LICENSE`,
    `.gitignore`, `.gitmodules`, or standard tooling dotfiles (`.editorconfig`,
-   `.prettierrc`, etc.). If any such files exist, stop. Do not proceed. Inform the user
-   that source code was detected and route to the `context-creation` skill.
-3. Confirm `${PROJECT_ROOT}/.agents/projectContext/` directory exists and is writable. If not, surface
-   the gap and stop.
+   `.prettierrc`, etc.). If any such files exist, stop and route to the
+   `context-creation` skill.
+3. Confirm `${PROJECT_ROOT}/.agents/projectContext/` directory exists and is writable.
+   If not, surface the gap and stop.
 
-If all three pass silently, proceed to Phase 1.
+If all three pass silently, proceed to Phase 1. Phase 1 does NOT re-run these checks —
+it consumes Pre-Flight's pass-status and announces the result.
 
 ---
 
 ## Phases
 
-### Phase 1 — Pre-Flight Confirmation
+### Phase 1 — Greenfield Confirmation
 
-**Goal:** Confirm the repository is genuinely greenfield and safe to begin decomposition.
+**Goal:** Acknowledge Pre-Flight pass, log entry into decomposition, and announce
+the role to the user. No re-checking of Pre-Flight's three conditions — that is
+Pre-Flight's job.
 
-**Inputs:** Repository root file listing; `${PROJECT_ROOT}/.agents/projectContext/CONTEXT.md` contents.
+**Inputs:** Pre-Flight pass-status (implicit; if Pre-Flight failed, this phase
+never runs).
 
 **Actions:**
 
-1. Run a file listing of the repository root (one level deep).
-2. Confirm no source files are present beyond the excluded set.
-3. Confirm `<!--INITIALIZED-->` is absent from `${PROJECT_ROOT}/.agents/projectContext/CONTEXT.md`.
-4. Report findings to the user: "No existing context or source code detected. Beginning
-   greenfield decomposition."
+1. Report findings to the user: "No existing context or source code detected.
+   Beginning greenfield decomposition."
+2. Log entry into the decompose skill (timestamp + invoking identity) to working
+   memory; this will be persisted to `${PROJECT_ROOT}/.agents/projectContext/.decompose-draft/_session.md`
+   when Phase 2.5 initializes the draft directory.
 
-**Output:** Confirmed greenfield state. Pre-flight logged.
+**Output:** Entry-into-decompose announced. Pre-Flight outcome carried forward.
 
-**Gate:** BLOCK. If `<!--INITIALIZED-->` is present or source code is detected, stop and
-route appropriately. Do not proceed with decomposition on a non-greenfield repository.
+**Gate:** BLOCK only if Pre-Flight did not pass. In normal operation this gate is a
+no-op (Pre-Flight already stopped the skill on failure). The gate exists for defense
+in depth: any caller that bypasses Pre-Flight and enters Phase 1 directly is rejected.
 
 ---
 
