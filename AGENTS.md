@@ -182,7 +182,7 @@ Always-loaded. Follow these even without reading project docs. Violation is unre
 
 ## §4 Reference Map
 
-Per-scope mapping of "what doc to read first" and "which skill or agent is the primary route" — twelve rows covering code change, stack/dependencies, auth/crypto, telemetry, migrations, networking, ADRs, stage promotion, architectural reconciliation, and out-of-scope findings.
+Per-scope mapping of "what doc to read first" and "which skill or agent is the primary route" — thirteen rows covering code change, stack/dependencies, auth/crypto, telemetry, migrations, networking, ADRs, stage promotion, architectural reconciliation, and out-of-scope findings.
 
 > **Loaded when:** any scope-touch decision — i.e. before acting on code that falls into one of the rows, look up which `${PROJECT_ROOT}/.agents/projectContext/*.md` doc must be read first and which skill/agent to route to. Full body: `${FRAMEWORK_ROOT}/.agents/commands/_reference-map.md`.
 

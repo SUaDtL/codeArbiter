@@ -55,7 +55,7 @@ A skill MAY be in multiple classes (e.g. `user → /adr` AND `condition` for "AD
 - Per-skill phase counts and gate definitions: see each `SKILL.md` body.
 - User-invoked commands (slash commands) and their argument shapes: `${FRAMEWORK_ROOT}/COMMANDS.md`.
 - Agent dispatch matrix (which skills dispatch which agents): `${FRAMEWORK_ROOT}/.agents/agents/INDEX.md`.
-- Routing table (cue → skill mapping): AGENTS.md §5 (extracted to `${FRAMEWORK_ROOT}/.agents/commands/_routing-table.md` after Workstream 3).
+- Routing table (cue → skill mapping): AGENTS.md §5 (stub) → full body at `${FRAMEWORK_ROOT}/.agents/commands/_routing-table.md`.
 
 ## Maintenance
 

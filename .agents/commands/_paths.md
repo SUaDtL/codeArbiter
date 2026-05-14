@@ -42,7 +42,7 @@ Two explicit roots govern every file path in framework files:
 
 **Consumer install:** After adding codeArbiter as a submodule, run `/init-vendor [--vendor-path=vendor/codearbiter/]`. This copies `AGENTS.md` to `${PROJECT_ROOT}/AGENTS.md`, writes `${PROJECT_ROOT}/CLAUDE.md` containing `@AGENTS.md`, and generates the `.claude/commands/*.md` shim layer with the vendor path baked in. Re-run after every codeArbiter upgrade to keep `AGENTS.md` current. Default vendor path is `vendor/codearbiter/`.
 
-## Self-edit mode (Workstream 4)
+## Self-edit mode (cross-reference)
 
 When editing the framework itself rather than building on top of it, see also
 `${FRAMEWORK_ROOT}/.agents/SELF-EDIT-MODE` (sentinel file). Its presence tells the

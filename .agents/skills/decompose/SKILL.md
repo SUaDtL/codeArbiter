@@ -124,17 +124,14 @@ persona for the duration of this skill.
    >     explain why it matters, ask the unlocking question.
    >   - Never silently skip a gap. Never suggest an integration without stating why.
 
-3. Ask the first Layer 1 question to begin the interview:
+**Output:** Persona adoption announced. Rules of Engagement stated. No questions
+asked yet — the Layer 1 question is asked at the end of Phase 2.5, after draft
+persistence is initialized, so that the first user answer is captured to disk.
 
-   > "Describe your solution vision in your own words. What problem does it solve,
-   > and for whom?"
-
-**Output:** Persona adoption announced. Rules of Engagement stated.
-
-**Gate:** No gate. This phase is declarative. Proceed to Phase 2.5 BEFORE asking
-the first Layer 1 question. The Layer 1 question above is asked at the end of
-Phase 2.5, not here, so that draft persistence is in place before any answer is
-captured.
+**Gate:** BLOCK. Phase 2 advances to Phase 2.5, never directly to Phase 3. Phase
+2.5 is the only place the Layer 1 question is asked. This ordering guarantees
+that no Q/A is ever held in conversation context without a corresponding draft
+file backing it.
 
 ---
 
@@ -476,9 +473,9 @@ operate without re-interviewing.
 **Compaction-recovery clause:** Like Phase 4, Phase 5 MUST read its inputs from disk.
 This makes the projectContext-population step idempotent across compaction. A user
 could approve Phase 4 artifacts, suffer a session compaction, then re-enter Phase 5
-in a fresh session by re-invoking `/decompose` (Pre-Flight detects the draft directory,
-Phase 2.5 Resume mode replays state, Phase 4 sees its artifacts already on disk and
-already approved, Phase 5 proceeds from disk).
+in a fresh session by re-invoking `/decompose` (Phase 2.5 detects the draft directory
+and enters Resume mode, replaying captured layers and DRAFT ADRs; Phase 4 sees its
+artifacts already on disk and already approved; Phase 5 proceeds from disk).
 
 **Actions:**
 
@@ -507,13 +504,15 @@ already approved, Phase 5 proceeds from disk).
 | Task Backlog | `${PROJECT_ROOT}/.agents/projectContext/open-tasks.md` |
 | All three artifacts | `${PROJECT_ROOT}/.agents/projectContext/decomposition/01-architecture-breakdown.md`, `02-phased-build-plan.md`, `03-task-backlog.md` — files already written during Phase 4 and approved by user; Phase 5 only verifies they exist. Do not rewrite. |
 
-ADR format (written in Layer 4 with `Status: DRAFT`, promoted to `Accepted` here in
-Phase 5 Action 2):
+ADR format. Layer 4 writes each forced choice with `Status: DRAFT`; Phase 5 Action
+2 promotes the same file in place by editing the Status line to `Accepted`.
+
+Layer 4 writes:
+
 ```
 # ADR-000N: <Decision Title>
 
-**Status:** DRAFT      ← written by Layer 4
-**Status:** Accepted   ← promoted by Phase 5 Action 2 (in-place edit)
+**Status:** DRAFT
 **Date:** <today>
 **Decider:** <user name or "user" if anonymous>
 
@@ -526,6 +525,15 @@ Phase 5 Action 2):
 ## Consequences
 <What is easier and harder as a result>
 ```
+
+Phase 5 Action 2 edits the file so the same fields read:
+
+```
+**Status:** Accepted
+```
+
+(Status is the only field that changes between Layer 4 and Phase 5. Do not
+duplicate or rewrite any other section.)
 
 **Output:** All projectContext files written with content derived from the interview.
 Every Layer 4 DRAFT ADR promoted to Accepted. `${PROJECT_ROOT}/.agents/projectContext/open-questions.md`
@@ -579,8 +587,8 @@ delete the draft directory, and return codeArbiter to normal orchestrator operat
 4. **Delete the draft directory.** Remove
    `${PROJECT_ROOT}/.agents/projectContext/.decompose-draft/` and all its contents (`_session.md`
    and `layer-*-*.md` files). This is mandatory — leaving the draft directory in
-   place signals a still-in-progress decomposition to Pre-Flight / Phase 2.5 of any
-   future `/decompose` invocation, and BLOCKs stage promotion to Stage 1 elsewhere
+   place signals a still-in-progress decomposition to Phase 2.5 of any future
+   `/decompose` invocation, and BLOCKs stage promotion to Stage 1 elsewhere
    in the framework.
 5. Announce return to normal operation:
    > "Decomposition complete. projectContext is initialized and locked. Draft
@@ -620,7 +628,7 @@ the only safe responses are `/decompose` (re-enters Resume mode) or `/decompose 
 | A projectContext file cannot be derived (insufficient interview data) | Re-open the relevant layer; ask the missing questions before writing the file |
 | `${PROJECT_ROOT}/.agents/projectContext/open-questions.md` has CONFIRM-NN items remaining | This is expected and acceptable; record them; note they block stage promotion |
 | User attempts to skip a layer | Refuse; explain that skipped layers produce CONFIRM-NN items that block stage promotion |
-| Auto-compaction or session interruption mid-Phase-3 | Re-invoke `/decompose`; Pre-Flight + Phase 2.5 detect `.decompose-draft/` and offer Resume / Restart / Abort. No data loss for completed layers. |
+| Auto-compaction or session interruption mid-Phase-3 | Re-invoke `/decompose`; Phase 2.5 detects `.decompose-draft/` and offers Resume / Restart / Abort. No data loss for completed layers. |
 | `.decompose-draft/` directory exists at skill start | Phase 2.5 enters Resume mode; user chooses Resume / Restart / Abort. Never silently delete. |
 | Per-layer disk write fails | Surface the error; do not advance to the next layer. Investigate write permissions, disk space, or path resolution before retry. |
 | Layer 4 produces zero DRAFT ADRs | Suspicious — Layer 4 should force at least one architectural trade-off. Re-examine the layer for missed forcing opportunities before advancing to Layer 5. |
