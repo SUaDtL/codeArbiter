@@ -71,4 +71,4 @@ do not commit from here.
 - MUST NOT absorb scope the plan does not name — mark it `[NEEDS-TRIAGE]`.
 - MUST NOT commit; route to `commit-gate` when the plan is fully verified.
 - MUST return an underspecified task (missing path or verification command) to `writing-plans` — do not improvise the gap.
-- MUST surface a plan-versus-code conflict via `/surface-conflict`, never silently reconcile it.
+- MUST surface a plan-versus-code conflict via `/conflict`, never silently reconcile it.
