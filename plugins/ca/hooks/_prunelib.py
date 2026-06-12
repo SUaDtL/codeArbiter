@@ -902,6 +902,105 @@ def _post_write_check(orig_bytes, landed):
     return errs
 
 
+def state_path():
+    return os.path.join(os.path.expanduser("~"), ".codearbiter", "prune-state.json")
+
+
+def load_state():
+    try:
+        with open(state_path(), encoding="utf-8") as f:
+            d = json.load(f)
+            return d if isinstance(d, dict) else {}
+    except Exception:  # noqa: BLE001
+        return {}
+
+
+def save_state(state):
+    d = os.path.dirname(state_path())
+    try:
+        os.makedirs(d, exist_ok=True)
+        with open(state_path(), "w", encoding="utf-8") as f:
+            f.write(_dumps(state))
+    except Exception:  # noqa: BLE001
+        pass
+
+
+def tail_is_settled(lines):
+    """True iff the transcript tail is a clean turn boundary: the most recent
+    assistant turn's tool calls are all resolved and we're not mid queue-op."""
+    last_asst = None
+    tr = set()
+    for ln in lines:
+        if isinstance(ln.obj, dict):
+            if ln.obj.get("type") == "assistant":
+                last_asst = ln
+            tr |= _tool_result_ids(ln.obj)
+    if last_asst is not None and (_tool_use_ids(last_asst.obj) - tr):
+        return False  # an open tool loop on the latest assistant turn
+    for ln in reversed(lines):
+        if isinstance(ln.obj, dict):
+            if ln.obj.get("type") == "queue-operation":
+                return False
+            break
+    return True
+
+
+def hook_run(payload, env=None):
+    """Service-mode entry: gate, short-circuit cheaply, prune at a safe point,
+    and record state for the statusline. ALWAYS returns 0 — a pruner failure
+    must never block the user's prompt or break the session."""
+    e = env if env is not None else os.environ
+    mode = (e.get("CODEARBITER_PRUNE", "off") or "off").lower()
+    if mode not in ("dry", "on"):
+        return 0
+    path = payload.get("transcript_path")
+    if not path or not os.path.isfile(path):
+        return 0
+    root = payload.get("cwd") or os.getcwd()
+    try:
+        import _hooklib
+        if not _hooklib.arbiter_active(root):
+            return 0
+    except Exception:  # noqa: BLE001
+        return 0
+    session = payload.get("session_id") or os.path.splitext(os.path.basename(path))[0]
+    cfg = Config.from_env(e)
+    cfg.execute = (mode == "on")
+    try:
+        st = os.stat(path)
+    except OSError:
+        return 0
+    if st.st_size < cfg.min_size or st.st_size > (50 << 20):
+        return 0
+    state = load_state()
+    rec = state.get(session, {})
+    if rec and (st.st_size - rec.get("last_pruned_size", 0)) < cfg.min_growth:
+        return 0  # cheap stat short-circuit: not enough new bytes
+    try:
+        with open(path, "rb") as f:
+            data = f.read()
+    except Exception:  # noqa: BLE001
+        return 0
+    if not tail_is_settled(load_lines(data)):
+        return 0
+    try:
+        res = run(path, cfg, session=session)
+    except Exception:  # noqa: BLE001 — never let pruning break the turn
+        return 0
+    b0, b1 = res["bytes_before"], res["bytes_after"]
+    state[session] = {
+        "path": path,
+        "last_size": b1 if res["executed"] else b0,
+        "last_pruned_size": (b1 if res["executed"] else st.st_size),
+        "last_run_ts": int(time.time()),
+        "pct": round(100.0 * (b0 - b1) / b0, 1) if b0 else 0.0,
+        "freed_bytes": b0 - b1,
+        "verdict": res["verdict"],
+    }
+    save_state(state)
+    return 0
+
+
 def append_audit_log(record):
     d = os.path.join(os.path.expanduser("~"), ".codearbiter")
     os.makedirs(d, exist_ok=True)

@@ -15,13 +15,14 @@
 
 import argparse
 import glob
+import json
 import os
 import sys
 import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from _prunelib import (  # noqa: E402
-    Config, audit, est_tokens, load_lines, run,
+    Config, audit, est_tokens, hook_run, load_lines, run,
 )
 
 
@@ -103,6 +104,27 @@ def cmd_report(path):
 def main(argv=None):
     utf8_stdio()
     argv = list(sys.argv[1:] if argv is None else argv)
+
+    # Hook mode: invoked by Claude Code with no argv and a hook JSON payload on
+    # stdin. Detected by the hook_event_name field. Always exits 0.
+    if not argv:
+        raw = ""
+        try:
+            if not sys.stdin.isatty():
+                raw = sys.stdin.read()
+        except Exception:  # noqa: BLE001
+            raw = ""
+        if raw.strip():
+            try:
+                payload = json.loads(raw)
+            except Exception:  # noqa: BLE001
+                payload = {}
+            if isinstance(payload, dict) and payload.get("hook_event_name"):
+                return hook_run(payload)
+        print("usage: prune-transcript.py <path|session-id> [--execute] ...",
+              file=sys.stderr)
+        return 2
+
     if argv and argv[0] in ("audit", "report"):
         if len(argv) < 2:
             sys.exit(f"usage: prune-transcript.py {argv[0]} <path>")
