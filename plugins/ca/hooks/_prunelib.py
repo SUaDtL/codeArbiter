@@ -22,6 +22,7 @@
 import hashlib
 import json
 import os
+import re
 import shutil
 import time
 
@@ -793,6 +794,17 @@ def backup_dir():
     return os.path.join(os.path.expanduser("~"), ".codearbiter", "prune-backups")
 
 
+def _safe_session(s):
+    """Reduce a session id to a safe single-path-component filename. The hook
+    payload's `session_id` is external input that feeds the backup filename and a
+    glob prefix in _prune_old_backups; an unsanitized value containing `..` or a
+    path separator could escape the backup dir. Normally a UUID, but never trust
+    it."""
+    s = str(s) if s is not None else "session"
+    s = re.sub(r"[^A-Za-z0-9._-]", "_", s).strip(".")
+    return (s or "session")[:128]
+
+
 def _prune_old_backups(session, keep):
     d = backup_dir()
     try:
@@ -814,6 +826,12 @@ def write_in_place(path, new_bytes, pre_stat, cfg, session="session",
     write+fsync and before the truncate decision — a test seam to simulate a
     concurrent append.
     """
+    # Refuse to follow a symlink: we rewrite in place and back up the target, so
+    # a symlinked transcript path would let us rewrite (and copy out) an
+    # arbitrary file. Transcripts are always real files under ~/.claude/projects.
+    if os.path.islink(path):
+        return False, "skipped: refusing to write through a symlink"
+    session = _safe_session(session)
     # Re-stat: bail if the session moved on since we read it.
     try:
         now = os.stat(path)

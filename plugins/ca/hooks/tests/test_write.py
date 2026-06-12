@@ -6,7 +6,7 @@ import unittest
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import _prunelib as P  # noqa: E402
-from _helpers import make_transcript  # noqa: E402
+from _helpers import make_transcript, redirect_home, restore_home  # noqa: E402
 
 
 class TestWrite(unittest.TestCase):
@@ -16,13 +16,11 @@ class TestWrite(unittest.TestCase):
         self.data = make_transcript(n_pairs=6, result_bytes=20000)
         with open(self.path, "wb") as f:
             f.write(self.data)
-        # Keep backups inside the tempdir so the suite never touches ~/.
-        self._home = os.environ.get("HOME")
-        os.environ["HOME"] = self.tmp.name
+        # Keep backups inside the tempdir so the suite never touches ~/ (all platforms).
+        self._home = redirect_home(self.tmp.name)
 
     def tearDown(self):
-        if self._home is not None:
-            os.environ["HOME"] = self._home
+        restore_home(self._home)
         self.tmp.cleanup()
 
     def cfg(self, **kw):
@@ -95,6 +93,31 @@ class TestWrite(unittest.TestCase):
         with open(self.path, "rb") as f:
             landed = f.read()
         self.assertEqual(landed, self.data)
+
+    def test_unsafe_session_id_cannot_escape_backup_dir(self):
+        # A traversal-laden session_id must be reduced to a safe component, so the
+        # backup lands inside backup_dir() and not outside it.
+        P.run(self.path, self.cfg(), session="../../evil/x")
+        outside = os.path.join(self.tmp.name, "evil")
+        self.assertFalse(os.path.exists(outside))
+        backups = os.listdir(P.backup_dir())
+        self.assertTrue(backups)  # something was written, and it's in the backup dir
+        self.assertTrue(all(os.sep not in b and "/" not in b for b in backups))
+
+    def test_refuse_to_write_through_symlink(self):
+        link = os.path.join(self.tmp.name, "link.jsonl")
+        try:
+            os.symlink(self.path, link)
+        except (OSError, NotImplementedError):
+            self.skipTest("symlink creation not permitted on this platform")
+        with open(link, "rb") as f:
+            pre = os.fstat(f.fileno())
+        ok, verdict = P.write_in_place(link, b"{}\n", pre, self.cfg(), session="sess")
+        self.assertFalse(ok)
+        self.assertIn("symlink", verdict)
+        # The real target is untouched.
+        with open(self.path, "rb") as f:
+            self.assertEqual(f.read(), self.data)
 
     def test_refuse_execute_on_validation_failure(self):
         # Force a validation failure pre-write by injecting a bad serialize.

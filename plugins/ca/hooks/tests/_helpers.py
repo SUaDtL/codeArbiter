@@ -5,6 +5,31 @@ import os
 
 FIXTURES = os.path.join(os.path.dirname(os.path.abspath(__file__)), "fixtures")
 
+# Every key os.path.expanduser("~") consults. On POSIX it reads HOME; on Windows
+# ntpath reads USERPROFILE first (then HOMEDRIVE+HOMEPATH) and IGNORES HOME — so a
+# test that only sets HOME silently writes state/backups/logs into the developer's
+# real ~ on Windows, and then fails on re-run from that leftover state.
+_HOME_KEYS = ("HOME", "USERPROFILE", "HOMEDRIVE", "HOMEPATH")
+
+
+def redirect_home(path):
+    """Point expanduser('~') at `path` on every platform. Returns a token to pass
+    back to restore_home() in tearDown."""
+    saved = {k: os.environ.get(k) for k in _HOME_KEYS}
+    os.environ["HOME"] = path
+    os.environ["USERPROFILE"] = path
+    os.environ.pop("HOMEDRIVE", None)
+    os.environ.pop("HOMEPATH", None)
+    return saved
+
+
+def restore_home(saved):
+    for k, v in saved.items():
+        if v is None:
+            os.environ.pop(k, None)
+        else:
+            os.environ[k] = v
+
 
 def fixture(name):
     with open(os.path.join(FIXTURES, name), "rb") as f:

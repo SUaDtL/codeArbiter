@@ -6,15 +6,14 @@ import unittest
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import _prunelib as P  # noqa: E402
-from _helpers import make_transcript  # noqa: E402
+from _helpers import make_transcript, redirect_home, restore_home  # noqa: E402
 
 
 class TestHook(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
-        # HOME redirect keeps state/backups/logs out of the real ~.
-        self._home = os.environ.get("HOME")
-        os.environ["HOME"] = self.tmp.name
+        # HOME redirect keeps state/backups/logs out of the real ~ (all platforms).
+        self._home = redirect_home(self.tmp.name)
         # An arbiter-enabled fake repo (cwd) so the gate passes.
         self.repo = os.path.join(self.tmp.name, "repo")
         os.makedirs(os.path.join(self.repo, ".codearbiter"))
@@ -26,8 +25,7 @@ class TestHook(unittest.TestCase):
             f.write(make_transcript(n_pairs=8, result_bytes=30000))
 
     def tearDown(self):
-        if self._home is not None:
-            os.environ["HOME"] = self._home
+        restore_home(self._home)
         self.tmp.cleanup()
 
     def payload(self, event="UserPromptSubmit"):
