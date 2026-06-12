@@ -121,7 +121,7 @@ def _tool_result_ids(o):
 
 class Index:
     __slots__ = ("protected_from", "last_assistant_idx", "tu_ids", "tr_ids",
-                 "edited_paths")
+                 "edited_paths", "edited_at", "tool_meta")
 
 
 def build_index(lines, cfg):
@@ -134,6 +134,8 @@ def build_index(lines, cfg):
     last_assistant = -1
     tu, tr = set(), set()
     edited = set()
+    edited_at = {}        # file_path -> highest line idx that Wrote/Edited it
+    tool_meta = {}        # tool_use id -> {"name", "path", "idx"}
     for ln in lines:
         o = ln.obj
         if not isinstance(o, dict):
@@ -145,15 +147,19 @@ def build_index(lines, cfg):
             tool_line_idxs.append(ln.idx)
         tu |= a
         tr |= b
-        # Track files a later Write/Edit superseded (used by Phase-3 strategy).
         msg = o.get("message")
         if isinstance(msg, dict) and isinstance(msg.get("content"), list):
             for blk in msg["content"]:
-                if (isinstance(blk, dict) and blk.get("type") == "tool_use"
-                        and blk.get("name") in ("Write", "Edit")):
-                    fp = (blk.get("input") or {}).get("file_path")
-                    if fp:
-                        edited.add(fp)
+                if not isinstance(blk, dict) or blk.get("type") != "tool_use":
+                    continue
+                name = blk.get("name")
+                path = (blk.get("input") or {}).get("file_path")
+                if blk.get("id"):
+                    tool_meta[blk["id"]] = {"name": name, "path": path, "idx": ln.idx}
+                # Track files a later Write/Edit superseded (Phase-3 strategy).
+                if name in ("Write", "Edit") and path:
+                    edited.add(path)
+                    edited_at[path] = max(edited_at.get(path, -1), ln.idx)
     keep = cfg.keep_recent
     if keep <= 0:
         prot_tool = len(lines)
@@ -171,6 +177,8 @@ def build_index(lines, cfg):
     idx.tu_ids = tu
     idx.tr_ids = tr
     idx.edited_paths = edited
+    idx.edited_at = edited_at
+    idx.tool_meta = tool_meta
     return idx
 
 
@@ -277,15 +285,320 @@ def s_oversize_result_clamp(lines, index, cfg, report):
     _record(report, "oversize-result-clamp", touched, before, after)
 
 
-# name -> (tier, function). Pinned order matters (data dependencies); selection
-# preserves this order. Only Phase-1 strategies are wired today; later phases
-# register here without touching the pipeline.
+def _content_list(o):
+    msg = o.get("message")
+    if isinstance(msg, dict) and isinstance(msg.get("content"), list):
+        return msg["content"]
+    return None
+
+
+def _clamp_in_block_content(c, max_bytes, max_lines):
+    """Clamp a tool_result `content` (str or list-of-{text}) in place. Returns
+    (changed, bytes_before, bytes_after)."""
+    before = after = 0
+    changed = False
+    if isinstance(c, str):
+        if not _has_marker(c):
+            clamped = _clamp_text(c, max_bytes, max_lines)
+            if clamped is not None:
+                before += len(c.encode("utf-8"))
+                after += len(clamped.encode("utf-8"))
+                return True, before, after, clamped
+        return False, 0, 0, c
+    if isinstance(c, list):
+        for tb in c:
+            if not isinstance(tb, dict) or tb.get("type") != "text":
+                continue
+            txt = tb.get("text")
+            if not isinstance(txt, str) or _has_marker(txt):
+                continue
+            clamped = _clamp_text(txt, max_bytes, max_lines)
+            if clamped is not None:
+                before += len(txt.encode("utf-8"))
+                after += len(clamped.encode("utf-8"))
+                tb["text"] = clamped
+                changed = True
+    return changed, before, after, c
+
+
+def s_reasoning_fold(lines, index, cfg, report):
+    """Drop thinking blocks from older assistant turns. We REMOVE the block
+    rather than leave an empty-signature stub: a thinking block with an invalid
+    signature can be rejected on resume, whereas an absent one never is. The
+    most recent assistant turn is always inside the protected tail."""
+    touched = before = 0
+    for ln in lines:
+        if ln.idx >= index.protected_from or not isinstance(ln.obj, dict):
+            continue
+        if ln.obj.get("type") != "assistant":
+            continue
+        content = _content_list(ln.obj)
+        if not content:
+            continue
+        thinking = [b for b in content
+                    if isinstance(b, dict) and b.get("type") == "thinking"]
+        if not thinking:
+            continue
+        keep = [b for b in content if b not in thinking]
+        if not keep:  # never empty a message
+            continue
+        for b in thinking:
+            before += len(_dumps(b))
+        ln.obj["message"]["content"] = keep
+        ln.dirty = True
+        touched += 1
+    _record(report, "reasoning-fold", touched, before, 0)
+
+
+def s_aged_result_condense(lines, index, cfg, report):
+    """Condense any remaining (unmarked) older tool_result body to a small head
+    + marker — harder than the gentle clamp, for results past the protected
+    tail. Specific handlers (shell/superseded) run earlier and mark their own."""
+    touched = before = after = 0
+    for ln in lines:
+        if ln.idx >= index.protected_from or not isinstance(ln.obj, dict):
+            continue
+        content = _content_list(ln.obj)
+        if not content:
+            continue
+        changed = False
+        for blk in content:
+            if not isinstance(blk, dict) or blk.get("type") != "tool_result":
+                continue
+            ch, b, a, newc = _clamp_in_block_content(blk.get("content"), 200, 10 ** 9)
+            if ch:
+                blk["content"] = newc
+                before += b
+                after += a
+                changed = True
+        if changed:
+            ln.dirty = True
+            touched += 1
+    _record(report, "aged-result-condense", touched, before, after)
+
+
+def s_mcp_payload_condense(lines, index, cfg, report):
+    """Condense the bulky `input` of mcp__ tool_use blocks (older turns)."""
+    touched = before = after = 0
+    for ln in lines:
+        if ln.idx >= index.protected_from or not isinstance(ln.obj, dict):
+            continue
+        content = _content_list(ln.obj)
+        if not content:
+            continue
+        changed = False
+        for blk in content:
+            if (not isinstance(blk, dict) or blk.get("type") != "tool_use"
+                    or not str(blk.get("name", "")).startswith("mcp__")):
+                continue
+            inp = blk.get("input")
+            if not isinstance(inp, (dict, list, str)):
+                continue
+            orig = _dumps(inp)
+            if _has_marker(orig):
+                continue
+            kept = ({k: v for k, v in inp.items() if _is_small_scalar(v)}
+                    if isinstance(inp, dict) else {})
+            new = dict(kept)
+            new["_ca_condensed"] = _marker(orig)
+            if len(_dumps(new)) >= len(orig):
+                continue
+            blk["input"] = new
+            before += len(orig)
+            after += len(_dumps(new))
+            changed = True
+        if changed:
+            ln.dirty = True
+            touched += 1
+    _record(report, "mcp-payload-condense", touched, before, after)
+
+
+def s_shell_tail_keep(lines, index, cfg, report):
+    """For Bash/PowerShell results, keep only the last N lines (the tail carries
+    the exit verdict). Claims its targets before the generic condenser."""
+    keep_lines = 30
+    touched = before = after = 0
+    for ln in lines:
+        if ln.idx >= index.protected_from or not isinstance(ln.obj, dict):
+            continue
+        content = _content_list(ln.obj)
+        if not content:
+            continue
+        changed = False
+        for blk in content:
+            if not isinstance(blk, dict) or blk.get("type") != "tool_result":
+                continue
+            meta = index.tool_meta.get(blk.get("tool_use_id"))
+            if not meta or meta.get("name") not in ("Bash", "PowerShell", "Shell"):
+                continue
+
+            def tail(s):
+                if _has_marker(s):
+                    return None
+                parts = s.split("\n")
+                if len(parts) <= keep_lines:
+                    return None
+                new = _marker(s) + "\n" + "\n".join(parts[-keep_lines:])
+                if len(new.encode("utf-8")) >= len(s.encode("utf-8")):
+                    return None
+                return new
+            c = blk.get("content")
+            if isinstance(c, str):
+                nt = tail(c)
+                if nt is not None:
+                    before += len(c.encode("utf-8"))
+                    after += len(nt.encode("utf-8"))
+                    blk["content"] = nt
+                    changed = True
+            elif isinstance(c, list):
+                for tb in c:
+                    if isinstance(tb, dict) and tb.get("type") == "text" \
+                            and isinstance(tb.get("text"), str):
+                        nt = tail(tb["text"])
+                        if nt is not None:
+                            before += len(tb["text"].encode("utf-8"))
+                            after += len(nt.encode("utf-8"))
+                            tb["text"] = nt
+                            changed = True
+        if changed:
+            ln.dirty = True
+            touched += 1
+    _record(report, "shell-tail-keep", touched, before, after)
+
+
+def s_superseded_read_condense(lines, index, cfg, report):
+    """Condense a Read result whose file was Written/Edited later in the
+    transcript — that snapshot is stale; the later edit is the source of truth."""
+    touched = before = after = 0
+    for ln in lines:
+        if ln.idx >= index.protected_from or not isinstance(ln.obj, dict):
+            continue
+        content = _content_list(ln.obj)
+        if not content:
+            continue
+        changed = False
+        for blk in content:
+            if not isinstance(blk, dict) or blk.get("type") != "tool_result":
+                continue
+            meta = index.tool_meta.get(blk.get("tool_use_id"))
+            if not meta or meta.get("name") != "Read":
+                continue
+            path = meta.get("path")
+            if not path or index.edited_at.get(path, -1) <= meta.get("idx", -1):
+                continue
+            ch, b, a, newc = _clamp_in_block_content(blk.get("content"), 80, 10 ** 9)
+            if ch:
+                blk["content"] = newc
+                before += b
+                after += a
+                changed = True
+        if changed:
+            ln.dirty = True
+            touched += 1
+    _record(report, "superseded-read-condense", touched, before, after)
+
+
+def s_repeat_reminder_fold(lines, index, cfg, report):
+    """Dedup repeated identical <system-reminder> text blocks — keep the first,
+    fold later copies to a marker."""
+    seen = set()
+    touched = before = after = 0
+    for ln in lines:
+        if not isinstance(ln.obj, dict):
+            continue
+        content = _content_list(ln.obj)
+        if not content:
+            continue
+        changed = False
+        for blk in content:
+            if not isinstance(blk, dict) or blk.get("type") != "text":
+                continue
+            txt = blk.get("text")
+            if not isinstance(txt, str) or "<system-reminder>" not in txt or _has_marker(txt):
+                continue
+            key = hashlib.sha256(txt.encode("utf-8")).hexdigest()
+            if key not in seen:
+                seen.add(key)
+                continue
+            # A later duplicate: fold it (only past the protected tail).
+            if ln.idx >= index.protected_from:
+                continue
+            marker = _marker(txt)
+            if len(marker.encode("utf-8")) >= len(txt.encode("utf-8")):
+                continue
+            before += len(txt.encode("utf-8"))
+            after += len(marker.encode("utf-8"))
+            blk["text"] = marker
+            changed = True
+        if changed:
+            ln.dirty = True
+            touched += 1
+    _record(report, "repeat-reminder-fold", touched, before, after)
+
+
+def s_inline_image_evict(lines, index, cfg, report):
+    """Replace base64 image payloads (older turns) with a marker."""
+    touched = before = after = 0
+
+    def walk(blocks):
+        nonlocal before, after
+        changed = False
+        for blk in blocks:
+            if not isinstance(blk, dict):
+                continue
+            if blk.get("type") == "image" and isinstance(blk.get("source"), dict):
+                src = blk["source"]
+                data = src.get("data")
+                if isinstance(data, str) and not _has_marker(data) and len(data) > 64:
+                    before += len(data)
+                    src["data"] = _marker(data)
+                    after += len(src["data"])
+                    changed = True
+            # tool_result content may itself be a list with image blocks
+            if isinstance(blk.get("content"), list):
+                if walk(blk["content"]):
+                    changed = True
+        return changed
+    for ln in lines:
+        if ln.idx >= index.protected_from or not isinstance(ln.obj, dict):
+            continue
+        content = _content_list(ln.obj)
+        if not content:
+            continue
+        if walk(content):
+            ln.dirty = True
+            touched += 1
+    _record(report, "inline-image-evict", touched, before, after)
+
+
+# name -> (tier, function). The pinned order matters: specific result handlers
+# (shell tail, superseded read) and payload condensers claim and mark their
+# targets BEFORE the generic aged/oversize condensers run, so each result is
+# trimmed by the most appropriate strategy exactly once (the marker enforces
+# single-processing). Selection preserves this order.
 TIERS = {"gentle": 0, "standard": 1, "aggressive": 2}
 STRATEGIES = {
     "sidecar-collapse": ("gentle", s_sidecar_collapse),
+    "reasoning-fold": ("standard", s_reasoning_fold),
+    "mcp-payload-condense": ("standard", s_mcp_payload_condense),
+    "shell-tail-keep": ("standard", s_shell_tail_keep),
+    "superseded-read-condense": ("aggressive", s_superseded_read_condense),
+    "repeat-reminder-fold": ("aggressive", s_repeat_reminder_fold),
+    "inline-image-evict": ("aggressive", s_inline_image_evict),
+    "aged-result-condense": ("standard", s_aged_result_condense),
     "oversize-result-clamp": ("gentle", s_oversize_result_clamp),
 }
-STRATEGY_ORDER = ["sidecar-collapse", "oversize-result-clamp"]
+STRATEGY_ORDER = [
+    "sidecar-collapse",
+    "reasoning-fold",
+    "mcp-payload-condense",
+    "shell-tail-keep",
+    "superseded-read-condense",
+    "repeat-reminder-fold",
+    "inline-image-evict",
+    "aged-result-condense",
+    "oversize-result-clamp",
+]
 
 
 def selected_strategies(cfg):
