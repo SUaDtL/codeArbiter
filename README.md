@@ -32,6 +32,31 @@ It will not:
 
 It is decisive and terse by design. If you want an assistant that hedges, this is the wrong tool.
 
+<details>
+<summary><b>What a loop actually feels like</b></summary>
+
+<br>
+
+```text
+you      /ca:fix the statusline keeps running the old version after an update
+
+arbiter  Routing to tdd (bug variant) — a regression test before any fix.
+         → writes a failing test, confirms it's red for the right reason
+         → minimal fix → suite green → coverage + lint gates clear
+
+you      /ca:commit
+arbiter  commit-gate: ✓ permission ✓ branch ✓ tests ✓ secrets
+         ✓ behavioral proof ✓ clean diff → committed.
+
+you      /ca:pr
+arbiter  reviewer fleet over the diff — coverage-auditor flags an untested seam.
+         BLOCK. Here's the gap. → (you resolve, re-run) → PR opened.
+```
+
+Every step is a gate you watch clear. You stay in the driver's seat; the gates keep the work honest — that exchange is a real one from this project's own history.
+
+</details>
+
 ## How it works
 
 One plugin, named `ca`. Claude Code namespaces every plugin command, so you invoke it as <kbd>/ca:feature</kbd>, <kbd>/ca:commit</kbd>, <kbd>/ca:commands</kbd>, and so on.
@@ -131,13 +156,51 @@ Every optional behavior is **off by default** and opt-in through an environment 
 |---|---|---|
 | `CODEARBITER_BABYSIT` | `off` | When `on`, <kbd>/ca:pr</kbd> auto-attaches a CI watcher to the PR it opens (same as running <kbd>/ca:watch</kbd> by hand). Ad-hoc <kbd>/ca:watch</kbd> works regardless. |
 | `CODEARBITER_BABYSIT_ONRED` | `propose` | The watcher's depth on a red check: `propose` (name the cause, suggest a fix, touch nothing) or `branch` (additionally stage the fix on an unmergeable `spike/fix-*`). |
-| `CODEARBITER_PRUNE` | `off` | Transcript-pruner mode: `off`, `dry` (report only), or `on` (trim on resume/compaction). |
-| `CODEARBITER_PRUNE_TIER` | — | Which pruning passes run; see <kbd>/ca:prune</kbd>. |
-| `CODEARBITER_PRUNE_KEEP_RECENT` | — | Protect the K most recent turns from pruning. |
-| `CODEARBITER_PRUNE_MIN_GROWTH` / `CODEARBITER_PRUNE_MAXBYTES` | — | Growth threshold before a prune runs / cap on bytes removed. |
-| `CODEARBITER_PRUNE_METRICS` | `~/.codearbiter/metrics/prune-dry.jsonl` | Where `dry`-mode data collection lands — one shared append-only JSONL log every session writes to, the evidence base for the `dry`→`on` go/no-go. |
 
-Both feature flags mirror each other's contract: shipped off, never auto-enabled, and dormant in a repo without `arbiter: enabled`.
+Every flag is shipped off, never auto-enabled, and dormant in a repo without `arbiter: enabled`. Preview features carry their own opt-ins — see [**Feature Forge**](#feature-forge) below.
+
+## Feature Forge
+
+<div align="center">
+
+### 🔨 &nbsp; The Feature Forge &nbsp; 🔨
+
+**Built, tested, and shipping — but not yet blessed.**<br/>
+Run them. Send the data. Decide what graduates.
+
+<img alt="channel preview" src="https://img.shields.io/badge/channel-preview-d97757">
+<img alt="opt-in only" src="https://img.shields.io/badge/opt--in-only-555">
+<img alt="your data promotes it" src="https://img.shields.io/badge/your_data-promotes_it-3da639">
+
+</div>
+
+Some features are built, tested, and shipping in the box — but not yet *blessed*. They live in the **Feature Forge**: off by default, fully dormant until you opt in, and labeled `preview` until real-world data earns them a promotion to a stable release. Nothing here touches your repo or your gates unless you turn it on.
+
+**This is also where you come in.** A preview graduates when the evidence says it's ready — and that evidence comes from people running it. Each forge feature ships a `dry` mode that does the real analysis and records what it *would* have done, changing nothing. Send that data back and you pull the promote date forward.
+
+### In the forge now
+
+**Live transcript pruning** · `CODEARBITER_PRUNE`
+
+Long sessions bloat the transcript until Claude Code compacts early and you lose working headroom. The pruner trims redundant clutter so a session lives longer — gains land at resume/compaction, never mid-turn. Three modes:
+
+| `CODEARBITER_PRUNE` | What happens |
+|---|---|
+| `off` *(default)* | nothing — fully dormant |
+| `dry` | **report only** — computes every prune it *would* make and logs the evidence; your transcript is untouched |
+| `on` | actually trims, at resume/compaction |
+
+Fine-tune with `CODEARBITER_PRUNE_TIER` (which passes run), `CODEARBITER_PRUNE_KEEP_RECENT` (protect the K most recent turns), and `CODEARBITER_PRUNE_MIN_GROWTH` / `CODEARBITER_PRUNE_MAXBYTES` (when a prune triggers / cap on bytes removed). Full detail in <kbd>/ca:prune</kbd>.
+
+#### Help promote it — run `dry`, send the log
+
+```sh
+export CODEARBITER_PRUNE=dry      # collect evidence, change nothing
+```
+
+`dry` mode appends one JSONL row per decision to `~/.codearbiter/metrics/prune-dry.jsonl` (relocate it with `CODEARBITER_PRUNE_METRICS`). Each row carries only the **would-be reduction, per-strategy savings, and a validation verdict** — sizes and strategy names, **no transcript content**. That file is the entire evidence base for the `dry → on` go/no-go.
+
+After a few sessions, [**open a "prune data" issue**](https://github.com/SUaDtL/codeArbiter/issues/new?title=Feature+Forge%3A+prune+data&labels=feature-forge,prune) and attach or paste your `prune-dry.jsonl`. The more real sessions come back, the sooner pruning leaves the forge. Thank you for forging. 🔨
 
 ## Commands
 
