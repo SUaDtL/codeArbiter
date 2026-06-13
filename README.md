@@ -123,6 +123,21 @@ The folder, git/diff, rate limits, token usage, cost, and context segments rende
 
 Remove it any time with <kbd>/ca:statusline</kbd> — it backs up and restores whatever statusline you had before.
 
+## Configuration
+
+Every optional behavior is **off by default** and opt-in through an environment variable — codeArbiter never enables one on your behalf. Set them in your shell profile (or per session) to turn them on.
+
+| Variable | Default | Effect |
+|---|---|---|
+| `CODEARBITER_BABYSIT` | `off` | When `on`, <kbd>/ca:pr</kbd> auto-attaches a CI watcher to the PR it opens (same as running <kbd>/ca:watch</kbd> by hand). Ad-hoc <kbd>/ca:watch</kbd> works regardless. |
+| `CODEARBITER_BABYSIT_ONRED` | `propose` | The watcher's depth on a red check: `propose` (name the cause, suggest a fix, touch nothing) or `branch` (additionally stage the fix on an unmergeable `spike/fix-*`). |
+| `CODEARBITER_PRUNE` | `off` | Transcript-pruner mode: `off`, `dry` (report only), or `on` (trim on resume/compaction). |
+| `CODEARBITER_PRUNE_TIER` | — | Which pruning passes run; see <kbd>/ca:prune</kbd>. |
+| `CODEARBITER_PRUNE_KEEP_RECENT` | — | Protect the K most recent turns from pruning. |
+| `CODEARBITER_PRUNE_MIN_GROWTH` / `CODEARBITER_PRUNE_MAXBYTES` | — | Growth threshold before a prune runs / cap on bytes removed. |
+
+Both feature flags mirror each other's contract: shipped off, never auto-enabled, and dormant in a repo without `arbiter: enabled`.
+
 ## Commands
 
 Every intent flows through a command; direct off-channel instructions get redirected to the catalog. The full list is in [`plugins/ca/COMMANDS.md`](./plugins/ca/COMMANDS.md) and via <kbd>/ca:commands</kbd>.
