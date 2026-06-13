@@ -7,13 +7,17 @@
 Every intent routes through a gated skill or reviewer agent. Nothing commits until the gates are green. Decisions go through SMARTS. The audit trail is append-only.
 
 <img alt="Claude Code plugin" src="https://img.shields.io/badge/Claude_Code-plugin-d97757">
-<img alt="version 2.1.0-beta.5" src="https://img.shields.io/badge/version-2.1.0--beta.5-2b7489">
+<img alt="version 2.1.0-beta.6" src="https://img.shields.io/badge/version-2.1.0--beta.6-2b7489">
 <img alt="commands" src="https://img.shields.io/badge/commands-34-555">
 <img alt="skills" src="https://img.shields.io/badge/skills-20-555">
 <img alt="agents" src="https://img.shields.io/badge/agents-14-555">
 <img alt="license MIT" src="https://img.shields.io/badge/license-MIT-3da639">
 
 <sub>Install it globally; it stays dormant until you opt a repo in.</sub>
+
+<!-- DEMO: once recorded, replace this comment with the in-motion GIF. Recording shot list in docs/demo-script.md
+<div align="center"><img src="docs/demo.gif" alt="codeArbiter in motion — a gate blocks, the human resolves, the work goes green" width="900"></div>
+-->
 
 </div>
 
@@ -161,18 +165,7 @@ Every flag is shipped off, never auto-enabled, and dormant in a repo without `ar
 
 ## Feature Forge
 
-<div align="center">
-
-### 🔨 &nbsp; The Feature Forge &nbsp; 🔨
-
-**Built, tested, and shipping — but not yet blessed.**<br/>
-Run them. Send the data. Decide what graduates.
-
-<img alt="channel preview" src="https://img.shields.io/badge/channel-preview-d97757">
-<img alt="opt-in only" src="https://img.shields.io/badge/opt--in-only-555">
-<img alt="your data promotes it" src="https://img.shields.io/badge/your_data-promotes_it-3da639">
-
-</div>
+<div align="center"><img src="docs/feature-forge.svg" alt="The Feature Forge — preview features: built, tested, shipping, not yet blessed" width="100%"></div>
 
 Some features are built, tested, and shipping in the box — but not yet *blessed*. They live in the **Feature Forge**: off by default, fully dormant until you opt in, and labeled `preview` until real-world data earns them a promotion to a stable release. Nothing here touches your repo or your gates unless you turn it on.
 
