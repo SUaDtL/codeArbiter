@@ -9,8 +9,11 @@ font; color is a constrained palette).
 - **The terminal is a constrained medium; respect it.** Variable width, a 16/256/truecolor palette
   that the user's theme controls, monospace only, and a reader who often pipes or greps the output.
 - **Degrade without color.** Never let color be the only carrier of meaning (core 3.B/§5 spirit): a
-  red number must also read as bad when color is stripped. Honor `NO_COLOR`; detect a non-TTY pipe and
-  drop ANSI (or emit plain) so piped output stays parseable.
+  red number must also read as bad when color is stripped. Always honor `NO_COLOR`. For a normal CLI,
+  also drop ANSI on a non-TTY pipe so redirected output stays parseable. The exception is an
+  *intentionally-piped colored UI* (e.g. a statusline the host always pipes and renders in color):
+  there, keep color and gate only on `NO_COLOR`, never on `isatty` — an isatty test would strip color
+  in normal use.
 - **Width is unknown.** Fit to the reported width with a margin; never assume 80. A line that wraps in
   a narrow terminal corrupts a box or table. Clamp and truncate deterministically.
 - **Glyph width is real.** CJK and many emoji are two columns; combining marks are zero. Count visible
@@ -22,7 +25,7 @@ font; color is a constrained palette).
 
 ## Tells (CLI)
 
-- Color as the sole signal; no `NO_COLOR` / non-TTY fallback.
+- Color as the sole signal; ignoring `NO_COLOR` (or, for a normal CLI, no non-TTY fallback).
 - Hardcoded 80-column assumptions; lines that wrap and corrupt a box.
 - Character-count math that misaligns on CJK/emoji width.
 - Emoji or box-drawing as decoration rather than structure.
@@ -31,6 +34,6 @@ font; color is a constrained palette).
 ## Pre-flight slice (CLI)
 
 - [ ] Renders correctly at narrow and wide widths; no wrap corruption.
-- [ ] Plain/parseable output when piped or `NO_COLOR` is set; color never the only signal.
+- [ ] Honors `NO_COLOR`; a normal CLI emits plain output when piped; color is never the only signal.
 - [ ] Column math counts visible width (CJK/emoji safe).
 - [ ] Decoration earns its place; errors are actionable.
