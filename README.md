@@ -195,6 +195,10 @@ export CODEARBITER_PRUNE=dry      # collect evidence, change nothing
 
 After a few sessions, [**open a "prune data" issue**](https://github.com/arbiterForge/codeArbiter/issues/new?title=Feature+Forge%3A+prune+data&labels=feature-forge,prune) and attach or paste your `prune-dry.jsonl`. The more real sessions come back, the sooner pruning leaves the forge. Thank you for forging. 🔨
 
+**Cost-arbitrage farm** · `/ca:sprint --farm` (needs `FARM_API_KEY`)
+
+`--farm` runs the implementation step on cheap [OpenCode Zen](https://opencode.ai) workers in isolated worktrees instead of premium subagents. Claude still writes the spec, the failing tests, and the plan, and still routes every task through the same spec-compliance, quality, and fresh-verification gates, so the cheap model can only pass the gates, never redefine them. The arbitrage is in who writes the code, not in whether it gets reviewed. It is **not yet validated on real runs**, so it ships off and stays `preview`. The promotion bar is being defined as an open question (`CONFIRM-05`); setup and the API-key/model config live in <kbd>/ca:sprint</kbd> and the farm setup doc.
+
 ## Commands
 
 Every intent flows through a command; direct off-channel instructions get redirected to the catalog. The full list is in [`plugins/ca/COMMANDS.md`](./plugins/ca/COMMANDS.md) and via <kbd>/ca:commands</kbd>.
