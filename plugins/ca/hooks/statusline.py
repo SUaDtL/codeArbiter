@@ -935,7 +935,7 @@ def seg_window_cells(data):
         if r:
             dt = r - now
             # a reset already in the past is stale data, not "rolls over now"
-            tail = f"{WHITE}{human_dur(dt)}{RESET}" if dt > 0 else f"{GREY}—{RESET}"
+            tail = f"{WHITE}{human_dur(dt)}{RESET}" if dt > 0 else f"{GREY}--{RESET}"
             cell += f" {GREY}{ARR}{RESET} {tail}"
         cells.append(cell)
     return cells
@@ -1228,7 +1228,13 @@ def render(raw):
 
     box.bottom(tees=tail_tees)
     out = box.render()
-    return redshift(out) if safe(dev_active, root) else out
+    out = redshift(out) if safe(dev_active, root) else out
+    # Honor the NO_COLOR convention by stripping SGR from the final render. Do NOT gate on
+    # isatty: a Claude Code statusline is intentionally piped, so an isatty test would drop
+    # color in normal use. Width math already ignores ANSI, so stripping keeps alignment.
+    if os.environ.get("NO_COLOR"):
+        out = ANSI.sub("", out)
+    return out
 
 
 def main():
